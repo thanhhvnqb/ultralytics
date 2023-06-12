@@ -1,0 +1,14 @@
+version: "3"
+services:
+  yolov8:
+    image: yolov8
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    container_name: yolov8
+    volumes:
+      - ./ultralytics/:/usr/src/ultralytics/ultralytics
+      - ../datasets:/usr/src/datasets
+      - ./runs:/usr/src/ultralytics/runs
+    # command: python3 -m timeit -n 300 "import time; time.sleep(300)"  
+    command: yolo detect train data=coco.yaml model=yolov8n.yaml epochs=100 imgsz=640 project=yolov8 name=yolov8n close_mosaic=10
