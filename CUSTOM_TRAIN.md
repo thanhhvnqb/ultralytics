@@ -7,7 +7,8 @@
 #     └── coco  ← downloads here (20.1 GB)-->
 # Huấn luyện Yolov8 trên máy local
 
-- Khi chạy huấn luyện, chạy lệnh ```docker compose up```. Cần cài đặt docker, docker compose, nvidia-docker để chạy được với GPU.
+- Khi chạy huấn luyện, chạy lệnh ```./train.sh <ten_model>```. Cần cài đặt docker, docker compose, nvidia-docker để chạy được với GPU.
+- Để test speed của model, chạy lệnh ```./speed.sh <ten_model>```.
 - Link excel làm việc: https://docs.google.com/spreadsheets/d/1GpOcga7PgX1a2QyrQVaa36dww1n2GsXhqD7AUEivQwE/edit#gid=0
 
 # Chuẩn bị cơ sở dữ liệu
