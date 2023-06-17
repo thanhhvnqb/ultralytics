@@ -49,7 +49,8 @@ from ultralytics.nn.modules import (
     CBFuse,
     CBLinear,
     Silence,
-)
+    MBConv,
+    C2mb)
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import v8ClassificationLoss, v8DetectionLoss, v8OBBLoss, v8PoseLoss, v8SegmentationLoss
@@ -860,6 +861,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             ADown,
             SPPELAN,
             C2fAttn,
+            C2mb,
             C3,
             C3TR,
             C3Ghost,
@@ -878,7 +880,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 )  # num heads
 
             args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C3, C3TR, C3Ghost, C3x, RepC3):
+            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is AIFI:
