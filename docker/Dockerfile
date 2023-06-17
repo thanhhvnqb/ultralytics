@@ -8,6 +8,7 @@ RUN pip install --no-cache nvidia-tensorrt --index-url https://pypi.ngc.nvidia.c
 
 # Downloads to user config dir
 ADD https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Arial.Unicode.ttf /root/.config/Ultralytics/
+ADD https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Arial.Unicode.ttf /tmp/Ultralytics/
 
 # Install linux packages
 # g++ required to build 'tflite_support' package
