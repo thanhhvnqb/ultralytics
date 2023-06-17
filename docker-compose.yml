@@ -10,5 +10,6 @@ services:
       - ./ultralytics/:/usr/src/ultralytics/ultralytics
       - ../datasets:/usr/src/datasets
       - ./runs:/usr/src/ultralytics/runs
-    # command: python3 -m timeit -n 300 "import time; time.sleep(300)"  
-    command: yolo detect train data=coco.yaml model=yolov8n.yaml epochs=100 imgsz=640 project=yolov8 name=yolov8n close_mosaic=10
+    command: python3 -m timeit -n 300 "import time; time.sleep(300)"  ## for remote to container to check
+    # command: yolo detect train data=coco.yaml model=yolov8n.yaml epochs=100 imgsz=640 name=trainval/yolov8n close_mosaic=10  # training
+    # command: yolo val detect data=coco128.yaml model=yolov8n.yaml batch=1 device=cpu name=speed/yolov8n  # test speed

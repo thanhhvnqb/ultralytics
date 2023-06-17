@@ -1,0 +1,1 @@
+docker compose run yolov8 yolo detect train data=coco.yaml model=$1.yaml epochs=100 imgsz=640 name=trainval/$1 close_mosaic=10  # training
