@@ -5,11 +5,24 @@ services:
     build:
       context: ./docker
       dockerfile: Dockerfile
+      shm_size: '26gb'
     container_name: yolov8
+    ipc: host
+    network_mode: host
     volumes:
       - ./ultralytics/:/usr/src/ultralytics/ultralytics
       - ../datasets:/usr/src/datasets
       - ./runs:/usr/src/ultralytics/runs
-    command: python3 -m timeit -n 300 "import time; time.sleep(300)"  ## for remote to container to check
-    # command: yolo detect train data=coco.yaml model=yolov8n.yaml epochs=100 imgsz=640 name=trainval/yolov8n close_mosaic=10  # training
+      - ../Dataset/Coco 2017/:/usr/src/datasets/coco/images/
+    shm_size: '26gb'
+    restart: no
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
+    # command: python3 -m timeit -n 300 "import time; time.sleep(300)"  ## for remote to container to check
+    command: yolo detect train data=coco.yaml model=yolov8n.yaml name=trainval/yolov8n imgsz=640 batch=128 epochs=100 close_mosaic=10 workers=8  # training
     # command: yolo val detect data=coco128.yaml model=yolov8n.yaml batch=1 device=cpu name=speed/yolov8n  # test speed
