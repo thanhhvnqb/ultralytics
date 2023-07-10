@@ -16,7 +16,6 @@ Example:
     os.system(f'onnxsim {f} {f} && open {f}')
     ```
 """
-from .custom_block import (MBConv, C2mb)
 from .block import (
     C1,
     C2,
@@ -76,9 +75,12 @@ from .transformer import (
     TransformerLayer,
 )
 
+from .custom_block import (MBConv, C2mb, MBConv4, C2mb4, MBConvS, C2mbS)
+
 __all__ = ('Conv', 'Conv2', 'LightConv', 'RepConv', 'DWConv', 'DWConvTranspose2d', 'ConvTranspose', 'Focus',
            'GhostConv', 'ChannelAttention', 'SpatialAttention', 'CBAM', 'Concat', 'TransformerLayer',
            'TransformerBlock', 'MLPBlock', 'LayerNorm2d', 'DFL', 'HGBlock', 'HGStem', 'SPP', 'SPPF', 'C1', 'C2', 'C3',
            'C2f', 'C3x', 'C3TR', 'C3Ghost', 'GhostBottleneck', 'Bottleneck', 'BottleneckCSP', 'Proto', 'Detect',
            'Segment', 'Pose', 'Classify', 'TransformerEncoderLayer', 'RepC3', 'RTDETRDecoder', 'AIFI',
-           'DeformableTransformerDecoder', 'DeformableTransformerDecoderLayer', 'MSDeformAttn', 'MLP', 'MBConv', 'C2mb')
+           'DeformableTransformerDecoder', 'DeformableTransformerDecoderLayer', 'MSDeformAttn', 'MLP',
+           'MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS')

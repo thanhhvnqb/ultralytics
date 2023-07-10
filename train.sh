@@ -1,1 +1,1 @@
-yolo detect train data=coco.yaml model=$1.yaml name=trainval/$1 imgsz=640 batch=96 epochs=100 close_mosaic=10 workers=8 device=0 pretrained=False
+yolo detect train data=coco.yaml model=$1.yaml name=trainval/$1 imgsz=640 batch=64 epochs=100 close_mosaic=10 workers=8 device=0 pretrained=False

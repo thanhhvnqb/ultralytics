@@ -49,8 +49,8 @@ from ultralytics.nn.modules import (
     CBFuse,
     CBLinear,
     Silence,
-    MBConv,
-    C2mb)
+    C2mb, C2mb4,
+    C2mbS)
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import v8ClassificationLoss, v8DetectionLoss, v8OBBLoss, v8PoseLoss, v8SegmentationLoss
@@ -294,7 +294,7 @@ class DetectionModel(BaseModel):
         if isinstance(m, Detect):  # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
             s = 256  # 2x min stride
             m.inplace = self.inplace
-            forward = lambda x: self.forward(x)[0] if isinstance(m, (Segment, Pose, OBB)) else self.forward(x)
+            def forward(x): return self.forward(x)[0] if isinstance(m, (Segment, Pose)) else self.forward(x)
             m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s))])  # forward
             self.stride = m.stride
             m.bias_init()  # only run once
@@ -862,6 +862,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             SPPELAN,
             C2fAttn,
             C2mb,
+            C2mb4,
+            C2mbS,
             C3,
             C3TR,
             C3Ghost,
@@ -880,7 +882,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 )  # num heads
 
             args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C3, C3TR, C3Ghost, C3x, RepC3):
+            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is AIFI:
