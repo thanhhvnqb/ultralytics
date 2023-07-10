@@ -1,1 +1,0 @@
-yolo val detect data=coco128.yaml model=$1.yaml batch=1 device=cpu name=speed/$1
