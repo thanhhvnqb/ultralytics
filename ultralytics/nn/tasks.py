@@ -50,7 +50,7 @@ from ultralytics.nn.modules import (
     CBLinear,
     Silence,
     C2mb, C2mb4,
-    C2mbS)
+    C2mbS, RepDWConv, MBRepConv, C2mbrep)
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import v8ClassificationLoss, v8DetectionLoss, v8OBBLoss, v8PoseLoss, v8SegmentationLoss
@@ -190,6 +190,9 @@ class BaseModel(nn.Module):
                     delattr(m, "bn")  # remove batchnorm
                     m.forward = m.forward_fuse  # update forward
                 if isinstance(m, RepConv):
+                    m.fuse_convs()
+                    m.forward = m.forward_fuse  # update forward
+                if isinstance(m, RepDWConv):
                     m.fuse_convs()
                     m.forward = m.forward_fuse  # update forward
             self.info(verbose=verbose)
@@ -864,7 +867,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             C2mb,
             C2mb4,
             C2mbS,
-            C3,
+            C2mbrep, C3,
             C3TR,
             C3Ghost,
             nn.ConvTranspose2d,
@@ -882,7 +885,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 )  # num heads
 
             args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C3, C3TR, C3Ghost, C3x, RepC3):
+            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C2mbrep, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is AIFI:
