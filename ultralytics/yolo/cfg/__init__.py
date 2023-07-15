@@ -75,7 +75,7 @@ CFG_INT_KEYS = ('epochs', 'patience', 'batch', 'workers', 'seed', 'close_mosaic'
 CFG_BOOL_KEYS = ('save', 'exist_ok', 'verbose', 'deterministic', 'single_cls', 'rect', 'cos_lr', 'overlap_mask', 'val',
                  'save_json', 'save_hybrid', 'half', 'dnn', 'plots', 'show', 'save_txt', 'save_conf', 'save_crop',
                  'show_labels', 'show_conf', 'visualize', 'augment', 'agnostic_nms', 'retina_masks', 'boxes', 'keras',
-                 'optimize', 'int8', 'dynamic', 'simplify', 'nms', 'v5loader', 'profile')
+                 'optimize', 'int8', 'dynamic', 'simplify', 'nms', 'profile')
 
 
 def cfg2dict(cfg):
@@ -171,8 +171,8 @@ def check_cfg_mismatch(base: Dict, custom: Dict, e=None):
     If any mismatched keys are found, the function prints out similar keys from the base list and exits the program.
 
     Args:
-        custom (Dict): a dictionary of custom configuration options
-        base (Dict): a dictionary of base configuration options
+        custom (dict): a dictionary of custom configuration options
+        base (dict): a dictionary of base configuration options
     """
     custom = _handle_deprecation(custom)
     base, custom = (set(x.keys()) for x in (base, custom))

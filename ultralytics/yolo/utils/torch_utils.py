@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torchvision
 
 from ultralytics.yolo.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, RANK, __version__
-from ultralytics.yolo.utils.checks import check_version
+from ultralytics.yolo.utils.checks import check_requirements, check_version
 
 try:
     import thop
@@ -51,6 +51,13 @@ def smart_inference_mode():
         return (torch.inference_mode if TORCH_1_9 else torch.no_grad)()(fn)
 
     return decorate
+
+
+def get_cpu_info():
+    """Return a string with system CPU information, i.e. 'Apple M2'."""
+    check_requirements('py-cpuinfo')
+    import cpuinfo  # noqa
+    return cpuinfo.get_cpu_info()['brand_raw'].replace('(R)', '').replace('CPU ', '').replace('@ ', '')
 
 
 def select_device(device='', batch=0, newline=False, verbose=True):
@@ -93,10 +100,10 @@ def select_device(device='', batch=0, newline=False, verbose=True):
         arg = 'cuda:0'
     elif mps and getattr(torch, 'has_mps', False) and torch.backends.mps.is_available() and TORCH_2_0:
         # Prefer MPS if available
-        s += 'MPS\n'
+        s += f'MPS ({get_cpu_info()})\n'
         arg = 'mps'
     else:  # revert to CPU
-        s += 'CPU\n'
+        s += f'CPU ({get_cpu_info()})\n'
         arg = 'cpu'
 
     if verbose and RANK == -1:
@@ -232,7 +239,7 @@ def get_flops(model, imgsz=640):
 
 
 def get_flops_with_torch_profiler(model, imgsz=640):
-    # Compute model FLOPs (thop alternative)
+    """Compute model FLOPs (thop alternative)."""
     model = de_parallel(model)
     p = next(model.parameters())
     stride = (max(int(model.stride.max()), 32) if hasattr(model, 'stride') else 32) * 2  # max stride
