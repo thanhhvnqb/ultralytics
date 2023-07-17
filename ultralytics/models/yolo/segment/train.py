@@ -1,5 +1,4 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
-
 from copy import copy
 
 from ultralytics.models import yolo

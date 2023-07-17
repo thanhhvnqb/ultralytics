@@ -49,7 +49,6 @@ TensorFlow.js:
     $ ln -s ../../yolov5/yolov8n_web_model public/yolov8n_web_model
     $ npm start
 """
-
 import json
 import os
 import shutil

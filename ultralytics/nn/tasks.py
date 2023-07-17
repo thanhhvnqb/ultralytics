@@ -123,7 +123,8 @@ class BaseModel(nn.Module):
         y, dt, embeddings = [], [], []  # outputs
         for m in self.model:
             if m.f != -1:  # if not from previous layer
-                x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+                x = y[m.f] if isinstance(m.f, int) else [
+                    x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             x = m(x)  # run
@@ -281,7 +282,8 @@ class DetectionModel(BaseModel):
     def __init__(self, cfg="yolov8n.yaml", ch=3, nc=None, verbose=True):  # model, input channels, number of classes
         """Initialize the YOLOv8 detection model with the given config and parameters."""
         super().__init__()
-        self.yaml = cfg if isinstance(cfg, dict) else yaml_model_load(cfg)  # cfg dict
+        self.yaml = cfg if isinstance(
+            cfg, dict) else yaml_model_load(cfg)  # cfg dict
 
         # Define model
         ch = self.yaml["ch"] = self.yaml.get("ch", ch)  # input channels
@@ -297,8 +299,10 @@ class DetectionModel(BaseModel):
         if isinstance(m, Detect):  # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
             s = 256  # 2x min stride
             m.inplace = self.inplace
-            def forward(x): return self.forward(x)[0] if isinstance(m, (Segment, Pose)) else self.forward(x)
-            m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s))])  # forward
+            def forward(x): return self.forward(x)[0] if isinstance(
+                m, (Segment, Pose)) else self.forward(x)
+            m.stride = torch.tensor(
+                [s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s))])  # forward
             self.stride = m.stride
             m.bias_init()  # only run once
         else:
@@ -317,7 +321,8 @@ class DetectionModel(BaseModel):
         f = [None, 3, None]  # flips (2-ud, 3-lr)
         y = []  # outputs
         for si, fi in zip(s, f):
-            xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
+            xi = scale_img(x.flip(fi) if fi else x, si,
+                           gs=int(self.stride.max()))
             yi = super().predict(xi)[0]  # forward
             yi = self._descale_pred(yi, fi, si, img_size)
             y.append(yi)
@@ -342,7 +347,8 @@ class DetectionModel(BaseModel):
         e = 1  # exclude layer count
         i = (y[0].shape[-1] // g) * sum(4**x for x in range(e))  # indices
         y[0] = y[0][..., :-i]  # large
-        i = (y[-1].shape[-1] // g) * sum(4 ** (nl - 1 - x) for x in range(e))  # indices
+        i = (y[-1].shape[-1] // g) * sum(4 ** (nl - 1 - x)
+                                         for x in range(e))  # indices
         y[-1] = y[-1][..., i:]  # small
         return y
 
@@ -402,7 +408,8 @@ class ClassificationModel(BaseModel):
 
     def _from_yaml(self, cfg, ch, nc, verbose):
         """Set YOLOv8 model configurations and define the model architecture."""
-        self.yaml = cfg if isinstance(cfg, dict) else yaml_model_load(cfg)  # cfg dict
+        self.yaml = cfg if isinstance(
+            cfg, dict) else yaml_model_load(cfg)  # cfg dict
 
         # Define model
         ch = self.yaml["ch"] = self.yaml.get("ch", ch)  # input channels
@@ -435,7 +442,8 @@ class ClassificationModel(BaseModel):
             elif nn.Conv2d in types:
                 i = types.index(nn.Conv2d)  # nn.Conv2d index
                 if m[i].out_channels != nc:
-                    m[i] = nn.Conv2d(m[i].in_channels, nc, m[i].kernel_size, m[i].stride, bias=m[i].bias is not None)
+                    m[i] = nn.Conv2d(
+                        m[i].in_channels, nc, m[i].kernel_size, m[i].stride, bias=m[i].bias is not None)
 
     def init_criterion(self):
         """Initialize the loss criterion for the ClassificationModel."""
@@ -507,14 +515,16 @@ class RTDETRDetectionModel(DetectionModel):
         }
 
         preds = self.predict(img, batch=targets) if preds is None else preds
-        dec_bboxes, dec_scores, enc_bboxes, enc_scores, dn_meta = preds if self.training else preds[1]
+        dec_bboxes, dec_scores, enc_bboxes, enc_scores, dn_meta = preds if self.training else preds[
+            1]
         if dn_meta is None:
             dn_bboxes, dn_scores = None, None
         else:
             dn_bboxes, dec_bboxes = torch.split(dec_bboxes, dn_meta["dn_num_split"], dim=2)
             dn_scores, dec_scores = torch.split(dec_scores, dn_meta["dn_num_split"], dim=2)
 
-        dec_bboxes = torch.cat([enc_bboxes.unsqueeze(0), dec_bboxes])  # (7, bs, 300, 4)
+        dec_bboxes = torch.cat(
+            [enc_bboxes.unsqueeze(0), dec_bboxes])  # (7, bs, 300, 4)
         dec_scores = torch.cat([enc_scores.unsqueeze(0), dec_scores])
 
         loss = self.criterion(
@@ -543,7 +553,8 @@ class RTDETRDetectionModel(DetectionModel):
         y, dt, embeddings = [], [], []  # outputs
         for m in self.model[:-1]:  # except the head part
             if m.f != -1:  # if not from previous layer
-                x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+                x = y[m.f] if isinstance(m.f, int) else [
+                    x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             x = m(x)  # run
@@ -794,7 +805,8 @@ def attempt_load_one_weight(weight, device=None, inplace=True, fuse=False):
     model = (ckpt.get("ema") or ckpt["model"]).to(device).float()  # FP32 model
 
     # Model compatibility updates
-    model.args = {k: v for k, v in args.items() if k in DEFAULT_CFG_KEYS}  # attach args to model
+    # attach args to model
+    model.args = {k: v for k, v in args.items() if k in DEFAULT_CFG_KEYS}
     model.pt_path = weight  # attach *.pt file path to model
     model.task = guess_model_task(model)
     if not hasattr(model, "stride"):
@@ -825,16 +837,19 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         scale = d.get("scale")
         if not scale:
             scale = tuple(scales.keys())[0]
-            LOGGER.warning(f"WARNING ⚠️ no model scale passed. Assuming scale='{scale}'.")
+            LOGGER.warning(
+                f"WARNING ⚠️ no model scale passed. Assuming scale='{scale}'.")
         depth, width, max_channels = scales[scale]
 
     if act:
-        Conv.default_act = eval(act)  # redefine default activation, i.e. Conv.default_act = nn.SiLU()
+        # redefine default activation, i.e. Conv.default_act = nn.SiLU()
+        Conv.default_act = eval(act)
         if verbose:
             LOGGER.info(f"{colorstr('activation:')} {act}")  # print
 
     if verbose:
-        LOGGER.info(f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
+        LOGGER.info(
+            f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
     ch = [ch]
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
@@ -842,7 +857,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         for j, a in enumerate(args):
             if isinstance(a, str):
                 with contextlib.suppress(ValueError):
-                    args[j] = locals()[a] if a in locals() else ast.literal_eval(a)
+                    args[j] = locals()[a] if a in locals(
+                    ) else ast.literal_eval(a)
 
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
         if m in (
@@ -876,7 +892,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             RepC3,
         ):
             c1, c2 = ch[f], args[0]
-            if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
+            # if c2 not equal to number of classes (i.e. for Classify() output)
+            if c2 != nc:
                 c2 = make_divisible(min(c2, max_channels) * width, 8)
             if m is C2fAttn:
                 args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)  # embed channels
