@@ -1,7 +1,7 @@
 ---
 comments: true
-description: Explore supported dataset formats for training YOLO detection models, including Ultralytics YOLO and COCO. This guide covers various dataset formats and their specific configurations for effective object detection training.
-keywords: object detection, datasets, formats, Ultralytics YOLO, COCO, label format, dataset file format, dataset definition, YOLO dataset, model configuration
+description: Navigate through supported dataset formats, methods to utilize them and how to add your own datasets. Get insights on porting or converting label formats.
+keywords: Ultralytics, YOLO, datasets, object detection, dataset formats, label formats, data conversion
 ---
 
 # Object Detection Datasets Overview
@@ -51,10 +51,10 @@ Here's how you can use these formats to train your model:
 !!! example ""
 
     === "Python"
-    
+
         ```python
         from ultralytics import YOLO
-        
+
         # Load a model
         model = YOLO('yolov8n.pt')  # load a pretrained model (recommended for training)
 
@@ -62,7 +62,7 @@ Here's how you can use these formats to train your model:
         model.train(data='coco128.yaml', epochs=100, imgsz=640)
         ```
     === "CLI"
-    
+
         ```bash
         # Start training from a pretrained *.pt model
         yolo detect train data=coco128.yaml model=yolov8n.pt epochs=100 imgsz=640

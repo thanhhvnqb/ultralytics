@@ -1,7 +1,7 @@
 ---
 comments: true
-description: Learn about the Argoverse dataset, a rich dataset designed to support research in autonomous driving tasks such as 3D tracking, motion forecasting, and stereo depth estimation.
-keywords: Argoverse Dataset, Sensor Dataset, Autonomous Driving Research, Deep Learning Models, YOLOv8n Model, 3D Tracking, Motion Forecasting, Stereo Depth Estimation, Labeled 3D Object Tracks, High-Quality Sensor Data, Richly Annotated HD Maps
+description: Explore Argoverse, a comprehensive dataset for autonomous driving tasks including 3D tracking, motion forecasting and depth estimation used in YOLO.
+keywords: Argoverse dataset, autonomous driving, YOLO, 3D tracking, motion forecasting, LiDAR data, HD maps, ultralytics documentation
 ---
 
 # Argoverse Dataset
@@ -47,10 +47,10 @@ To train a YOLOv8n model on the Argoverse dataset for 100 epochs with an image s
 
         ```python
         from ultralytics import YOLO
-        
+
         # Load a model
         model = YOLO('yolov8n.pt')  # load a pretrained model (recommended for training)
-        
+
         # Train the model
         model.train(data='Argoverse.yaml', epochs=100, imgsz=640)
         ```

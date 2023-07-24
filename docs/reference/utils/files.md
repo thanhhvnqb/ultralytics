@@ -1,6 +1,16 @@
+---
+description: Discover how to use Ultralytics utility functions for file-related operations including incrementing paths, finding file age, checking file size and creating directories.
+keywords: Ultralytics, utility functions, file operations, working directory, file age, file size, create directories
+---
+
 ## WorkingDirectory
 ---
 ### ::: ultralytics.utils.files.WorkingDirectory
+<br><br>
+
+## spaces_in_path
+---
+### ::: ultralytics.utils.files.spaces_in_path
 <br><br>
 
 ## increment_path

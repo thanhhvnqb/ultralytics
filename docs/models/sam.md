@@ -1,7 +1,7 @@
 ---
 comments: true
-description: Discover the Segment Anything Model (SAM), a revolutionary promptable image segmentation model, and delve into the details of its advanced architecture and the large-scale SA-1B dataset.
-keywords: Segment Anything, Segment Anything Model, SAM, Meta SAM, image segmentation, promptable segmentation, zero-shot performance, SA-1B dataset, advanced architecture, auto-annotation, Ultralytics, pre-trained models, SAM base, SAM large, instance segmentation, computer vision, AI, artificial intelligence, machine learning, data annotation, segmentation masks, detection model, YOLO detection model, bibtex, Meta AI
+description: Explore the cutting-edge Segment Anything Model (SAM) from Ultralytics that allows real-time image segmentation. Learn about its promptable segmentation, zero-shot performance, and how to use it.
+keywords: Ultralytics, image segmentation, Segment Anything Model, SAM, SA-1B dataset, real-time performance, zero-shot transfer, object detection, image analysis, machine learning
 ---
 
 # Segment Anything Model (SAM)
@@ -37,10 +37,10 @@ The Segment Anything Model can be employed for a multitude of downstream tasks t
     Segment image with given prompts.
 
     === "Python"
-    
+
         ```python
         from ultralytics import SAM
-        
+
         # Load a model
         model = SAM('sam_b.pt')
 
@@ -59,10 +59,10 @@ The Segment Anything Model can be employed for a multitude of downstream tasks t
     Segment the whole image.
 
     === "Python"
-    
+
         ```python
         from ultralytics import SAM
-        
+
         # Load a model
         model = SAM('sam_b.pt')
 
@@ -73,7 +73,7 @@ The Segment Anything Model can be employed for a multitude of downstream tasks t
         model('path/to/image.jpg')
         ```
     === "CLI"
-    
+
         ```bash
         # Run inference with a SAM model
         yolo predict model=sam_b.pt source=path/to/image.jpg
@@ -86,7 +86,7 @@ The Segment Anything Model can be employed for a multitude of downstream tasks t
     This way you can set image once and run prompts inference multiple times without running image encoder multiple times.
 
     === "Prompt inference"
-    
+
         ```python
         from ultralytics.models.sam import Predictor as SAMPredictor
 
@@ -106,7 +106,7 @@ The Segment Anything Model can be employed for a multitude of downstream tasks t
     Segment everything with additional args.
 
     === "Segment everything"
-    
+
         ```python
         from ultralytics.models.sam import Predictor as SAMPredictor
 
@@ -207,7 +207,7 @@ If you find SAM useful in your research or development work, please consider cit
 
 ```bibtex
 @misc{kirillov2023segment,
-      title={Segment Anything}, 
+      title={Segment Anything},
       author={Alexander Kirillov and Eric Mintun and Nikhila Ravi and Hanzi Mao and Chloe Rolland and Laura Gustafson and Tete Xiao and Spencer Whitehead and Alexander C. Berg and Wan-Yen Lo and Piotr Dollár and Ross Girshick},
       year={2023},
       eprint={2304.02643},

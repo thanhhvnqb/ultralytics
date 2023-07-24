@@ -1,7 +1,7 @@
 ---
 comments: true
-description: Learn about the COCO-Seg dataset, designed for simple training of YOLO models on instance segmentation tasks.
-keywords: COCO-Seg, COCO, instance segmentation, segmentation annotations, computer vision, deep learning, data science, YOLO models, image size, open-source datasets
+description: Explore the possibilities of the COCO-Seg dataset, designed for object instance segmentation and YOLO model training. Discover key features, dataset structure, applications, and usage.
+keywords: Ultralytics, YOLO, COCO-Seg, dataset, instance segmentation, model training, deep learning, computer vision
 ---
 
 # COCO-Seg Dataset
@@ -47,10 +47,10 @@ To train a YOLOv8n-seg model on the COCO-Seg dataset for 100 epochs with an imag
 
         ```python
         from ultralytics import YOLO
-        
+
         # Load a model
         model = YOLO('yolov8n-seg.pt')  # load a pretrained model (recommended for training)
-        
+
         # Train the model
         model.train(data='coco-seg.yaml', epochs=100, imgsz=640)
         ```
@@ -78,7 +78,7 @@ If you use the COCO-Seg dataset in your research or development work, please cit
 
 ```bibtex
 @misc{lin2015microsoft,
-      title={Microsoft COCO: Common Objects in Context}, 
+      title={Microsoft COCO: Common Objects in Context},
       author={Tsung-Yi Lin and Michael Maire and Serge Belongie and Lubomir Bourdev and Ross Girshick and James Hays and Pietro Perona and Deva Ramanan and C. Lawrence Zitnick and Piotr Dollár},
       year={2015},
       eprint={1405.0312},

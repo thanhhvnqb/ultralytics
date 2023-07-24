@@ -1,7 +1,7 @@
 ---
 comments: true
-description: Learn about the VOC dataset, designed to encourage research on object detection, segmentation, and classification with standardized evaluation metrics.
-keywords: PASCAL VOC dataset, object detection, segmentation, classification, computer vision, deep learning, benchmarking, VOC2007, VOC2012, mean Average Precision, mAP, PASCAL VOC evaluation server, trained models, YAML, YAML file, VOC.yaml, training, YOLOv8n model, model training, image size, annotations, object bounding boxes, segmentation masks, instance segmentation, SSD, Mask R-CNN, yolov8n.pt, mosaicing, PASCAL VOC Consortium
+description: A complete guide to the PASCAL VOC dataset used for object detection, segmentation and classification tasks with relevance to YOLO model training.
+keywords: Ultralytics, PASCAL VOC dataset, object detection, segmentation, image classification, YOLO, model training, VOC.yaml, deep learning
 ---
 
 # VOC Dataset
@@ -47,10 +47,10 @@ To train a YOLOv8n model on the VOC dataset for 100 epochs with an image size of
 
         ```python
         from ultralytics import YOLO
-        
+
         # Load a model
         model = YOLO('yolov8n.pt')  # load a pretrained model (recommended for training)
-        
+
         # Train the model
         model.train(data='VOC.yaml', epochs=100, imgsz=640)
         ```
@@ -79,7 +79,7 @@ If you use the VOC dataset in your research or development work, please cite the
 
 ```bibtex
 @misc{everingham2010pascal,
-      title={The PASCAL Visual Object Classes (VOC) Challenge}, 
+      title={The PASCAL Visual Object Classes (VOC) Challenge},
       author={Mark Everingham and Luc Van Gool and Christopher K. I. Williams and John Winn and Andrew Zisserman},
       year={2010},
       eprint={0909.5206},

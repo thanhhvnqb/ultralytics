@@ -1,7 +1,7 @@
 ---
 comments: true
-description: Learn to integrate hyperparameter tuning using Ray Tune with Ultralytics YOLOv8, and optimize your model's performance efficiently.
-keywords: yolov8, ray tune, hyperparameter tuning, hyperparameter optimization, machine learning, computer vision, deep learning, image recognition
+description: Discover how to streamline hyperparameter tuning for YOLOv8 models with Ray Tune. Learn to accelerate tuning, integrate with Weights & Biases, and analyze results.
+keywords: Ultralytics, YOLOv8, Ray Tune, hyperparameter tuning, machine learning optimization, Weights & Biases integration, result analysis
 ---
 
 # Efficient Hyperparameter Tuning with Ray Tune and YOLOv8
@@ -29,7 +29,7 @@ To install the required packages, run:
 !!! tip "Installation"
 
     ```bash
-    # Install and update Ultralytics and Ray Tune pacakges
+    # Install and update Ultralytics and Ray Tune packages
     pip install -U ultralytics 'ray[tune]'
 
     # Optionally install W&B for logging
@@ -99,7 +99,7 @@ In this example, we demonstrate how to use a custom search space for hyperparame
     ```python
     from ultralytics import YOLO
 
-    # Define a YOLO model    
+    # Define a YOLO model
     model = YOLO("yolov8n.pt")
 
     # Run Ray Tune on the model
