@@ -13,11 +13,11 @@
 
 # Chuẩn bị cơ sở dữ liệu
 - Tải file coco từ link này:
-    - Cho detection: https://github.com/ultralytics/yolov5/releases/download/v1.0/coco2017labels.zip
+    - Cho detection: https://github.com/ultralytics/yolov5/releases/download/v1.0/coco2017labels.zip (Nên dùng chung với segmentation luôn cho khỏe)
     - Cho Segmentation: https://github.com/ultralytics/yolov5/releases/download/v1.0/coco2017labels-segments.zip
     - Cho Pose: https://github.com/ultralytics/yolov5/releases/download/v1.0/coco2017labels-pose.zip
 - Sau đó tải ảnh về và cho vào thư mục images
 
-# Cài đặt docker, nvidia-docker và docker compose
+# Cài đặt docker, nvidia-docker và docker compose (đang bị lỗi exit khi kết thúc 1 epoch)
 - Cài đặt docker: ```sudo apt install docker.io```
 - Cài đặt Docker compose: theo hướng dẫn [tại đây](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-22-04) (Lưu ý chọn version cho ubuntu)
