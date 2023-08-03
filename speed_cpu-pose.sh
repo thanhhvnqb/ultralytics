@@ -1,0 +1,1 @@
+yolo pose val data=coco-pose.yaml model=$1.yaml imgsz=640 batch=1 device=cpu name=speed/$1
