@@ -7,6 +7,17 @@
 #     └── coco  ← downloads here (20.1 GB)-->
 # Huấn luyện Yolov8 trên máy local
 
+- Đoạn code trỏ đến file config (liên quan đến dataset_dir):
+```
+if os_name == 'Windows':
+    path = Path.home() / 'AppData' / 'Roaming' / sub_dir
+elif os_name == 'Darwin':  # macOS
+    path = Path.home() / 'Library' / 'Application Support' / sub_dir
+elif os_name == 'Linux':
+    path = Path.home() / '.config' / sub_dir
+else:
+    raise ValueError(f'Unsupported operating system: {os_name}')
+```
 - Khi chạy huấn luyện, chạy lệnh ```./train.sh <ten_model>```. Cần cài đặt docker, docker compose, nvidia-docker để chạy được với GPU.
 - Để test speed của model, chạy lệnh ```./speed.sh <ten_model>```.
 - Link excel làm việc: https://docs.google.com/spreadsheets/d/1GpOcga7PgX1a2QyrQVaa36dww1n2GsXhqD7AUEivQwE/edit#gid=0
