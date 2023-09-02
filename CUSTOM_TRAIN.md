@@ -29,6 +29,18 @@ else:
     - Cho Pose: https://github.com/ultralytics/yolov5/releases/download/v1.0/coco2017labels-pose.zip
 - Sau đó tải ảnh về và cho vào thư mục images
 
+# Câu lệnh chạy experiments
+## Train
+- Câu lệnh train với 100 epoch
+```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=64 epochs=100 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
+- Câu lệnh train với 500 epoch
+```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
+- Câu lệnh train với 500 epoch với pretrained
+```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=./pretrained/yolov8n.pt```
+## Validation
+- Câu lệnh validate with trained models:
+```yolo val detect data=coco.yaml model=cyolov6n.yaml batch=128 device=0 name=val/cyolov6n pretrained=./trained_models/cyolov6n.pt```
+
 # Cài đặt docker, nvidia-docker và docker compose (đang bị lỗi exit khi kết thúc 1 epoch)
 - Cài đặt docker: ```sudo apt install docker.io```
 - Cài đặt Docker compose: theo hướng dẫn [tại đây](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-22-04) (Lưu ý chọn version cho ubuntu)
