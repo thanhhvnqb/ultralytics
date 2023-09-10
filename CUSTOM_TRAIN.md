@@ -31,15 +31,23 @@ else:
 
 # Câu lệnh chạy experiments
 ## Train
+### Detection
 - Câu lệnh train với 100 epoch
 ```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=64 epochs=100 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
 - Câu lệnh train với 500 epoch
 ```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
 - Câu lệnh train với 500 epoch với pretrained
 ```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=./pretrained/yolov8n.pt```
+### Pose
+- Câu lệnh train với 500 epoch
+```yolo pose train data=coco-pose.yaml model=cyolov12n-pose.yaml name=trainval/cyolov12n-pose imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
+
 ## Validation
+### Detection
 - Câu lệnh validate with trained models:
 ```yolo val detect data=coco.yaml model=cyolov6n.yaml batch=128 device=0 name=val/cyolov6n pretrained=./trained_models/cyolov6n.pt```
+### Pose
+
 
 # Cài đặt docker, nvidia-docker và docker compose (đang bị lỗi exit khi kết thúc 1 epoch)
 - Cài đặt docker: ```sudo apt install docker.io```
