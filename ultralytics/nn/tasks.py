@@ -8,6 +8,9 @@ import torch
 import torch.nn as nn
 
 from ultralytics.nn.modules import (
+    C2mb, C2mb4, C2mbS, RepDWConv, MBRepConv, C2mbrep, MB4RepConv, C2mb4rep)
+
+from ultralytics.nn.modules import (
     AIFI,
     C1,
     C2,
@@ -49,8 +52,7 @@ from ultralytics.nn.modules import (
     CBFuse,
     CBLinear,
     Silence,
-    C2mb, C2mb4,
-    C2mbS, RepDWConv, MBRepConv, C2mbrep)
+)
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import v8ClassificationLoss, v8DetectionLoss, v8OBBLoss, v8PoseLoss, v8SegmentationLoss
@@ -132,7 +134,8 @@ class BaseModel(nn.Module):
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
             if embed and m.i in embed:
-                embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
+                embeddings.append(nn.functional.adaptive_avg_pool2d(
+                    x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
                 if m.i == max(embed):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
         return x
@@ -158,14 +161,17 @@ class BaseModel(nn.Module):
         Returns:
             None
         """
-        c = m == self.model[-1] and isinstance(x, list)  # is final layer list, copy input as inplace fix
-        flops = thop.profile(m, inputs=[x.copy() if c else x], verbose=False)[0] / 1e9 * 2 if thop else 0  # FLOPs
+        c = m == self.model[-1] and isinstance(
+            x, list)  # is final layer list, copy input as inplace fix
+        flops = thop.profile(m, inputs=[x.copy() if c else x], verbose=False)[
+            0] / 1e9 * 2 if thop else 0  # FLOPs
         t = time_sync()
         for _ in range(10):
             m(x.copy() if c else x)
         dt.append((time_sync() - t) * 100)
         if m == self.model[0]:
-            LOGGER.info(f"{'time (ms)':>10s} {'GFLOPs':>10s} {'params':>10s}  module")
+            LOGGER.info(
+                f"{'time (ms)':>10s} {'GFLOPs':>10s} {'params':>10s}  module")
         LOGGER.info(f"{dt[-1]:10.2f} {flops:10.2f} {m.np:10.0f}  {m.type}")
         if c:
             LOGGER.info(f"{sum(dt):10.2f} {'-':>10s} {'-':>10s}  Total")
@@ -187,7 +193,8 @@ class BaseModel(nn.Module):
                     delattr(m, "bn")  # remove batchnorm
                     m.forward = m.forward_fuse  # update forward
                 if isinstance(m, ConvTranspose) and hasattr(m, "bn"):
-                    m.conv_transpose = fuse_deconv_and_bn(m.conv_transpose, m.bn)
+                    m.conv_transpose = fuse_deconv_and_bn(
+                        m.conv_transpose, m.bn)
                     delattr(m, "bn")  # remove batchnorm
                     m.forward = m.forward_fuse  # update forward
                 if isinstance(m, RepConv):
@@ -210,8 +217,10 @@ class BaseModel(nn.Module):
         Returns:
             (bool): True if the number of BatchNorm layers in the model is less than the threshold, False otherwise.
         """
-        bn = tuple(v for k, v in nn.__dict__.items() if "Norm" in k)  # normalization layers, i.e. BatchNorm2d()
-        return sum(isinstance(v, bn) for v in self.modules()) < thresh  # True if < 'thresh' BatchNorm layers in model
+        bn = tuple(v for k, v in nn.__dict__.items()
+                   if "Norm" in k)  # normalization layers, i.e. BatchNorm2d()
+        # True if < 'thresh' BatchNorm layers in model
+        return sum(isinstance(v, bn) for v in self.modules()) < thresh
 
     def info(self, detailed=False, verbose=True, imgsz=640):
         """
@@ -236,7 +245,8 @@ class BaseModel(nn.Module):
         """
         self = super()._apply(fn)
         m = self.model[-1]  # Detect()
-        if isinstance(m, Detect):  # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
+        # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
+        if isinstance(m, Detect):
             m.stride = fn(m.stride)
             m.anchors = fn(m.anchors)
             m.strides = fn(m.strides)
@@ -250,12 +260,14 @@ class BaseModel(nn.Module):
             weights (dict | torch.nn.Module): The pre-trained weights to be loaded.
             verbose (bool, optional): Whether to log the transfer progress. Defaults to True.
         """
-        model = weights["model"] if isinstance(weights, dict) else weights  # torchvision models are not dicts
+        model = weights["model"] if isinstance(
+            weights, dict) else weights  # torchvision models are not dicts
         csd = model.float().state_dict()  # checkpoint state_dict as FP32
         csd = intersect_dicts(csd, self.state_dict())  # intersect
         self.load_state_dict(csd, strict=False)  # load
         if verbose:
-            LOGGER.info(f"Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights")
+            LOGGER.info(
+                f"Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights")
 
     def loss(self, batch, preds=None):
         """
@@ -273,13 +285,15 @@ class BaseModel(nn.Module):
 
     def init_criterion(self):
         """Initialize the loss criterion for the BaseModel."""
-        raise NotImplementedError("compute_loss() needs to be implemented by task heads")
+        raise NotImplementedError(
+            "compute_loss() needs to be implemented by task heads")
 
 
 class DetectionModel(BaseModel):
     """YOLOv8 detection model."""
 
-    def __init__(self, cfg="yolov8n.yaml", ch=3, nc=None, verbose=True):  # model, input channels, number of classes
+    # model, input channels, number of classes
+    def __init__(self, cfg="yolov8n.yaml", ch=3, nc=None, verbose=True):
         """Initialize the YOLOv8 detection model with the given config and parameters."""
         super().__init__()
         self.yaml = cfg if isinstance(
@@ -288,15 +302,19 @@ class DetectionModel(BaseModel):
         # Define model
         ch = self.yaml["ch"] = self.yaml.get("ch", ch)  # input channels
         if nc and nc != self.yaml["nc"]:
-            LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
+            LOGGER.info(
+                f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml["nc"] = nc  # override YAML value
-        self.model, self.save = parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
-        self.names = {i: f"{i}" for i in range(self.yaml["nc"])}  # default names dict
+        self.model, self.save = parse_model(
+            deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
+        self.names = {i: f"{i}" for i in range(
+            self.yaml["nc"])}  # default names dict
         self.inplace = self.yaml.get("inplace", True)
 
         # Build strides
         m = self.model[-1]  # Detect()
-        if isinstance(m, Detect):  # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
+        # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
+        if isinstance(m, Detect):
             s = 256  # 2x min stride
             m.inplace = self.inplace
             def forward(x): return self.forward(x)[0] if isinstance(
@@ -389,7 +407,8 @@ class PoseModel(DetectionModel):
         if not isinstance(cfg, dict):
             cfg = yaml_model_load(cfg)  # load model YAML
         if any(data_kpt_shape) and list(data_kpt_shape) != list(cfg["kpt_shape"]):
-            LOGGER.info(f"Overriding model.yaml kpt_shape={cfg['kpt_shape']} with kpt_shape={data_kpt_shape}")
+            LOGGER.info(
+                f"Overriding model.yaml kpt_shape={cfg['kpt_shape']} with kpt_shape={data_kpt_shape}")
             cfg["kpt_shape"] = data_kpt_shape
         super().__init__(cfg=cfg, ch=ch, nc=nc, verbose=verbose)
 
@@ -414,19 +433,24 @@ class ClassificationModel(BaseModel):
         # Define model
         ch = self.yaml["ch"] = self.yaml.get("ch", ch)  # input channels
         if nc and nc != self.yaml["nc"]:
-            LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
+            LOGGER.info(
+                f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml["nc"] = nc  # override YAML value
         elif not nc and not self.yaml.get("nc", None):
-            raise ValueError("nc not specified. Must specify nc in model.yaml or function arguments.")
-        self.model, self.save = parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
+            raise ValueError(
+                "nc not specified. Must specify nc in model.yaml or function arguments.")
+        self.model, self.save = parse_model(
+            deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
         self.stride = torch.Tensor([1])  # no stride constraints
-        self.names = {i: f"{i}" for i in range(self.yaml["nc"])}  # default names dict
+        self.names = {i: f"{i}" for i in range(
+            self.yaml["nc"])}  # default names dict
         self.info()
 
     @staticmethod
     def reshape_outputs(model, nc):
         """Update a TorchVision classification model to class count 'n' if required."""
-        name, m = list((model.model if hasattr(model, "model") else model).named_children())[-1]  # last module
+        name, m = list((model.model if hasattr(model, "model")
+                       else model).named_children())[-1]  # last module
         if isinstance(m, Classify):  # YOLO Classify() head
             if m.linear.out_features != nc:
                 m.linear = nn.Linear(m.linear.in_features, nc)
@@ -520,8 +544,10 @@ class RTDETRDetectionModel(DetectionModel):
         if dn_meta is None:
             dn_bboxes, dn_scores = None, None
         else:
-            dn_bboxes, dec_bboxes = torch.split(dec_bboxes, dn_meta["dn_num_split"], dim=2)
-            dn_scores, dec_scores = torch.split(dec_scores, dn_meta["dn_num_split"], dim=2)
+            dn_bboxes, dec_bboxes = torch.split(
+                dec_bboxes, dn_meta["dn_num_split"], dim=2)
+            dn_scores, dec_scores = torch.split(
+                dec_scores, dn_meta["dn_num_split"], dim=2)
 
         dec_bboxes = torch.cat(
             [enc_bboxes.unsqueeze(0), dec_bboxes])  # (7, bs, 300, 4)
@@ -562,7 +588,8 @@ class RTDETRDetectionModel(DetectionModel):
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
             if embed and m.i in embed:
-                embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
+                embeddings.append(nn.functional.adaptive_avg_pool2d(
+                    x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
                 if m.i == max(embed):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
         head = self.model[-1]
@@ -591,7 +618,8 @@ class WorldModel(DetectionModel):
         text_token = clip.tokenize(text).to(device)
         txt_feats = model.encode_text(text_token).to(dtype=torch.float32)
         txt_feats = txt_feats / txt_feats.norm(p=2, dim=-1, keepdim=True)
-        self.txt_feats = txt_feats.reshape(-1, len(text), txt_feats.shape[-1]).detach()
+        self.txt_feats = txt_feats.reshape(-1,
+                                           len(text), txt_feats.shape[-1]).detach()
         self.model[-1].nc = len(text)
 
     def init_criterion(self):
@@ -619,7 +647,8 @@ class WorldModel(DetectionModel):
         y, dt, embeddings = [], [], []  # outputs
         for m in self.model:  # except the head part
             if m.f != -1:  # if not from previous layer
-                x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+                x = y[m.f] if isinstance(m.f, int) else [
+                    x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             if isinstance(m, C2fAttn):
@@ -635,7 +664,8 @@ class WorldModel(DetectionModel):
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
             if embed and m.i in embed:
-                embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
+                embeddings.append(nn.functional.adaptive_avg_pool2d(
+                    x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
                 if m.i == max(embed):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
         return x
@@ -765,8 +795,11 @@ def attempt_load_weights(weights, device=None, inplace=True, fuse=False):
     ensemble = Ensemble()
     for w in weights if isinstance(weights, list) else [weights]:
         ckpt, w = torch_safe_load(w)  # load ckpt
-        args = {**DEFAULT_CFG_DICT, **ckpt["train_args"]} if "train_args" in ckpt else None  # combined args
-        model = (ckpt.get("ema") or ckpt["model"]).to(device).float()  # FP32 model
+        # combined args
+        args = {**DEFAULT_CFG_DICT, **
+                ckpt["train_args"]} if "train_args" in ckpt else None
+        model = (ckpt.get("ema") or ckpt["model"]).to(
+            device).float()  # FP32 model
 
         # Model compatibility updates
         model.args = args  # attach args to model
@@ -776,7 +809,8 @@ def attempt_load_weights(weights, device=None, inplace=True, fuse=False):
             model.stride = torch.tensor([32.0])
 
         # Append
-        ensemble.append(model.fuse().eval() if fuse and hasattr(model, "fuse") else model.eval())  # model in eval mode
+        ensemble.append(model.fuse().eval() if fuse and hasattr(
+            model, "fuse") else model.eval())  # model in eval mode
 
     # Module updates
     for m in ensemble.modules():
@@ -793,15 +827,18 @@ def attempt_load_weights(weights, device=None, inplace=True, fuse=False):
     LOGGER.info(f"Ensemble created with {weights}\n")
     for k in "names", "nc", "yaml":
         setattr(ensemble, k, getattr(ensemble[0], k))
-    ensemble.stride = ensemble[int(torch.argmax(torch.tensor([m.stride.max() for m in ensemble])))].stride
-    assert all(ensemble[0].nc == m.nc for m in ensemble), f"Models differ in class counts {[m.nc for m in ensemble]}"
+    ensemble.stride = ensemble[int(torch.argmax(
+        torch.tensor([m.stride.max() for m in ensemble])))].stride
+    assert all(
+        ensemble[0].nc == m.nc for m in ensemble), f"Models differ in class counts {[m.nc for m in ensemble]}"
     return ensemble
 
 
 def attempt_load_one_weight(weight, device=None, inplace=True, fuse=False):
     """Loads a single model weights."""
     ckpt, weight = torch_safe_load(weight)  # load ckpt
-    args = {**DEFAULT_CFG_DICT, **(ckpt.get("train_args", {}))}  # combine model and default args, preferring model args
+    # combine model and default args, preferring model args
+    args = {**DEFAULT_CFG_DICT, **(ckpt.get("train_args", {}))}
     model = (ckpt.get("ema") or ckpt["model"]).to(device).float()  # FP32 model
 
     # Model compatibility updates
@@ -812,7 +849,8 @@ def attempt_load_one_weight(weight, device=None, inplace=True, fuse=False):
     if not hasattr(model, "stride"):
         model.stride = torch.tensor([32.0])
 
-    model = model.fuse().eval() if fuse and hasattr(model, "fuse") else model.eval()  # model in eval mode
+    model = model.fuse().eval() if fuse and hasattr(
+        model, "fuse") else model.eval()  # model in eval mode
 
     # Module updates
     for m in model.modules():
@@ -832,7 +870,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
     # Args
     max_channels = float("inf")
     nc, act, scales = (d.get(x) for x in ("nc", "activation", "scales"))
-    depth, width, kpt_shape = (d.get(x, 1.0) for x in ("depth_multiple", "width_multiple", "kpt_shape"))
+    depth, width, kpt_shape = (d.get(x, 1.0) for x in (
+        "depth_multiple", "width_multiple", "kpt_shape"))
     if scales:
         scale = d.get("scale")
         if not scale:
@@ -852,8 +891,10 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
     ch = [ch]
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
-    for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
-        m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]  # get module
+    # from, number, module, args
+    for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):
+        m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[
+            m]  # get module
         for j, a in enumerate(args):
             if isinstance(a, str):
                 with contextlib.suppress(ValueError):
@@ -883,7 +924,9 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             C2mb,
             C2mb4,
             C2mbS,
-            C2mbrep, C3,
+            C2mbrep,
+            C2mb4rep,
+            C3,
             C3TR,
             C3Ghost,
             nn.ConvTranspose2d,
@@ -896,13 +939,15 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             if c2 != nc:
                 c2 = make_divisible(min(c2, max_channels) * width, 8)
             if m is C2fAttn:
-                args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)  # embed channels
+                args[1] = make_divisible(
+                    min(args[1], max_channels // 2) * width, 8)  # embed channels
                 args[2] = int(
-                    max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2]
+                    max(round(min(args[2], max_channels // 2 // 32))
+                        * width, 1) if args[2] > 1 else args[2]
                 )  # num heads
 
             args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C2mbrep, C3, C3TR, C3Ghost, C3x, RepC3):
+            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C2mbrep, C2mb4rep, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is AIFI:
@@ -934,13 +979,16 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         else:
             c2 = ch[f]
 
-        m_ = nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
+        m_ = nn.Sequential(*(m(*args) for _ in range(n))
+                           ) if n > 1 else m(*args)  # module
         t = str(m)[8:-2].replace("__main__.", "")  # module type
         m.np = sum(x.numel() for x in m_.parameters())  # number params
         m_.i, m_.f, m_.type = i, f, t  # attach index, 'from' index, type
         if verbose:
-            LOGGER.info(f"{i:>3}{str(f):>20}{n_:>3}{m.np:10.0f}  {t:<45}{str(args):<30}")  # print
-        save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  # append to savelist
+            LOGGER.info(
+                f"{i:>3}{str(f):>20}{n_:>3}{m.np:10.0f}  {t:<45}{str(args):<30}")  # print
+        save.extend(x % i for x in ([f] if isinstance(
+            f, int) else f) if x != -1)  # append to savelist
         layers.append(m_)
         if i == 0:
             ch = []
@@ -955,10 +1003,12 @@ def yaml_model_load(path):
     path = Path(path)
     if path.stem in (f"yolov{d}{x}6" for x in "nsmlx" for d in (5, 8)):
         new_stem = re.sub(r"(\d+)([nslmx])6(.+)?$", r"\1\2-p6\3", path.stem)
-        LOGGER.warning(f"WARNING ⚠️ Ultralytics YOLO P6 models now use -p6 suffix. Renaming {path.stem} to {new_stem}.")
+        LOGGER.warning(
+            f"WARNING ⚠️ Ultralytics YOLO P6 models now use -p6 suffix. Renaming {path.stem} to {new_stem}.")
         path = path.with_name(new_stem + path.suffix)
 
-    unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(path))  # i.e. yolov8x.yaml -> yolov8.yaml
+    # i.e. yolov8x.yaml -> yolov8.yaml
+    unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(path))
     yaml_file = check_yaml(unified_path, hard=False) or check_yaml(path)
     d = yaml_load(yaml_file)  # model dict
     d["scale"] = guess_model_scale(path)
@@ -981,7 +1031,8 @@ def guess_model_scale(model_path):
     with contextlib.suppress(AttributeError):
         import re
 
-        return re.search(r"yolov\d+([nslmx])", Path(model_path).stem).group(1)  # n, s, m, l, or x
+        # n, s, m, l, or x
+        return re.search(r"yolov\d+([nslmx])", Path(model_path).stem).group(1)
     return ""
 
 
