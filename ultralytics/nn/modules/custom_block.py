@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from .conv import Conv, DWConv
 
-__all__ = ('MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv', 'C2mbrep')
+__all__ = ('MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv', 'C2mbrep', 'MB4RepConv', 'C2mb4rep')
 
 
 class LayerNorm(nn.Module):
@@ -287,6 +287,47 @@ class C2mbrep(nn.Module):
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+
+    def forward(self, x):
+        """Forward pass through C2f layer."""
+        y = list(self.cv1(x).chunk(2, 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+    def forward_split(self, x):
+        """Forward pass using split() instead of chunk()."""
+        y = list(self.cv1(x).split((self.c, self.c), 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+
+
+class MB4RepConv(nn.Module):
+    """Mobile Inverted Convolution block."""
+
+    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=4.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
+        super().__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, k=1)
+        self.dwconv = RepDWConv(c_, k=k, s=s)
+        self.cv2 = Conv(c_, c2, k=1)
+        self.add = shortcut and c1 == c2 and s == 1
+
+    def forward(self, x):
+        """'forward()' applies the YOLOv5 FPN to input data."""
+        return x + self.cv2(self.dwconv(self.cv1(x))) if self.add else self.cv2(self.dwconv(self.cv1(x)))
+
+
+class C2mb4rep(nn.Module):
+    """CSP Bottleneck with MBConvRep block."""
+
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
+        self.c = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(MB4RepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""

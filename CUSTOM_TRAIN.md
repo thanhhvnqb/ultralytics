@@ -40,7 +40,10 @@ else:
 ```yolo detect train data=coco.yaml model=cyolov10n.yaml name=trainval/cyolov10n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=./pretrained/yolov8n.pt```
 ### Pose
 - Câu lệnh train với 500 epoch
-```yolo pose train data=coco-pose.yaml model=cyolov12n-pose.yaml name=trainval/cyolov12n-pose imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
+```yolo pose train data=coco-pose.yaml model=cyolov12n-pose.yaml name=trainval/cyolov12n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
+### Segmentation
+- Câu lệnh train với 500 epoch
+```yolo segment train data=coco-pose.yaml model=cyolov12n-seg.yaml name=trainval/cyolov12n imgsz=640 batch=96 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
 
 ## Validation
 ### Detection
@@ -48,6 +51,13 @@ else:
 ```yolo val detect data=coco.yaml model=cyolov6n.yaml batch=128 device=0 name=val/cyolov6n pretrained=./trained_models/cyolov6n.pt```
 ### Pose
 
+
+## Speed
+### Detection
+- Câu lệnh đo tốc độ của task detection trên CPU:
+```yolo detect val data=coco.yaml model=$1.yaml imgsz=640 batch=1 device=cpu name=speed/$1```
+- Câu lệnh đo tốc độ của task detection trên GPU:
+```yolo val detect data=coco128.yaml model=$1.yaml batch=1 device=0 name=speed/$1``
 
 # Cài đặt docker, nvidia-docker và docker compose (đang bị lỗi exit khi kết thúc 1 epoch)
 - Cài đặt docker: ```sudo apt install docker.io```
