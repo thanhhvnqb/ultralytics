@@ -48,7 +48,7 @@ else:
 ## Validation
 ### Detection
 - Câu lệnh validate with trained models:
-```yolo val detect data=coco.yaml model=cyolov6n.yaml batch=128 device=0 name=val/cyolov6n pretrained=./trained_models/cyolov6n.pt```
+```yolo detect val data=coco.yaml model=cyolov6n.yaml batch=128 device=0 name=val/cyolov6n pretrained=./trained_models/cyolov6n.pt```
 ### Pose
 
 
