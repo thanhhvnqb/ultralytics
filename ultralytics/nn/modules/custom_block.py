@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from .conv import Conv, DWConv
 
 __all__ = ('MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv',
-           'C2mbrep', 'MB4RepConv', 'C2mb4rep', 'ChannelCoords', 'CFDWconv', 'ICFDWConv', 'C2ICFDW')
+           'C2mbrep', 'MB4RepConv', 'C2mb4rep', 'CFDWconv', 'ICFDWConv', 'C2ICFDW')
 
 
 class LayerNorm(nn.Module):
@@ -347,8 +347,9 @@ class ChannelCoords(nn.Module):
     """
     __constants__ = ['coord_channels',]
 
-    def __init__(self, rank, max_batch_size=128, with_r=False, max_size=640):
+    def __init__(self, rank, max_batch_size=128, stride=4, with_r=False, max_size=640):
         super().__init__()
+        max_size = max_size // stride
         self.coord_channels = self.compute_coord_channels(rank, with_r, max_batch_size, max_size)
         if rank == 1:
             self.forward = self.forward_rank1
@@ -475,13 +476,13 @@ class CFDWconv(nn.Module):
     """
     default_act = nn.SiLU()  # default activation
 
-    def __init__(self, c, k=(3, 5), s=1, g=1, act=True, bn=False, deploy=False, with_r=False, rank=2):
+    def __init__(self, c, k=(3, 5), s=1, g=1, act=True, bn=False, deploy=False, stride=4, with_r=False, rank=2):
         super().__init__()
         self.g = g
         self.k = k
         self.c = c
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
-        self.channel_coords = ChannelCoords(rank=rank, with_r=False)
+        self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
         self.bn = nn.BatchNorm2d(num_features=c + rank + int(with_r)) if bn and s == 1 else None
         self.conv = nn.ModuleList(DWConv(c + rank + int(with_r), c + rank + int(with_r), kn, s, act=False) for kn in k)
 
@@ -575,11 +576,12 @@ class CFDWconv(nn.Module):
 class ICFDWConv(nn.Module):
     """Inverted Coordinate Fusion Depthwise Convolution block."""
 
-    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=6.0, with_r=False, rank=2):  # ch_in, ch_out, shortcut, groups, kernels, expand
+    # ch_in, ch_out, shortcut, groups, kernels, expand
+    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=6.0, stride=4, with_r=False, rank=2):
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k=1)
-        self.cfdwconv = CFDWconv(c_, k=k, s=s)
+        self.cfdwconv = CFDWconv(c_, k=k, s=s, stride=stride, with_r=with_r, rank=rank)
         self.cv2 = Conv(c_ + rank + int(with_r), c2, k=1)
         self.add = shortcut and c1 == c2 and s == 1
 
@@ -592,13 +594,15 @@ class C2ICFDW(nn.Module):
     """CSP Bottleneck with ICFDWConv block."""
 
     # ch_in, ch_out, number, shortcut, groups, expansion
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, e=0.5, with_r=False, rank=2):
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
+        rank = 2
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(ICFDWConv(self.c, self.c, shortcut, k=k, with_r=with_r) for _ in range(n))
+        self.cv2 = Conv((rank + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(ICFDWConv(self.c, self.c, shortcut, k=k, stride=stride,
+                               with_r=with_r, rank=rank) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""

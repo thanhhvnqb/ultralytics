@@ -8,7 +8,8 @@ import torch
 import torch.nn as nn
 
 from ultralytics.nn.modules import (
-    C2mb, C2mb4, C2mbS, RepDWConv, MBRepConv, C2mbrep, MB4RepConv, C2mb4rep, CFDWconv, ICFDWConv, C2ICFDW, ChannelCoords)
+    C2mb, C2mb4, C2mbS, RepDWConv, MBRepConv, C2mbrep,
+    MB4RepConv, C2mb4rep, CFDWconv, ICFDWConv, C2ICFDW)
 
 from ultralytics.nn.modules import (
     AIFI,
@@ -929,7 +930,6 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             C2mbS,
             C2mbrep,
             C2mb4rep,
-            ChannelCoords,
             C2ICFDW,
             C3,
             C3TR,
