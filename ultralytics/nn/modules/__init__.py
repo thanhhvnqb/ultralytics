@@ -76,7 +76,7 @@ from .transformer import (
 )
 
 from .custom_block import (MBConv, C2mb, MBConv4, C2mb4, MBConvS, C2mbS, RepDWConv, MBRepConv,
-                           C2mbrep, MB4RepConv, C2mb4rep, CFDWconv, ICFDWConv, C2ICFDW, C2CIFDW)
+                           C2mbrep, MB4RepConv, C2mb4rep, CFDWconv, ICFDWConv, C2ICFDW, C2CIFDW, CC2IFDW)
 
 __all__ = ('Conv', 'Conv2', 'LightConv', 'RepConv', 'DWConv', 'DWConvTranspose2d', 'ConvTranspose', 'Focus',
            'GhostConv', 'ChannelAttention', 'SpatialAttention', 'CBAM', 'Concat', 'TransformerLayer',
@@ -84,4 +84,5 @@ __all__ = ('Conv', 'Conv2', 'LightConv', 'RepConv', 'DWConv', 'DWConvTranspose2d
            'C2f', 'C3x', 'C3TR', 'C3Ghost', 'GhostBottleneck', 'Bottleneck', 'BottleneckCSP', 'Proto', 'Detect',
            'Segment', 'Pose', 'Classify', 'TransformerEncoderLayer', 'RepC3', 'RTDETRDecoder', 'AIFI',
            'DeformableTransformerDecoder', 'DeformableTransformerDecoderLayer', 'MSDeformAttn', 'MLP',
-           'MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv', 'C2mbrep', "MB4RepConv", 'C2mb4rep', "CFDWconv", "ICFDWConv", "C2ICFDW", "C2CIFDW")
+           'MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv', 'C2mbrep', "MB4RepConv", 'C2mb4rep', "CFDWconv", "ICFDWConv", "C2ICFDW",
+           "C2CIFDW", 'CC2IFDW')
