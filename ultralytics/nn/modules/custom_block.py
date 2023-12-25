@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from .conv import Conv, DWConv
 
 __all__ = ('MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv',
-           'C2mbrep', 'MB4RepConv', 'C2mb4rep', 'CFDWconv', 'ICFDWConv', 'C2ICFDW', 'C2CIFDW')
+           'C2mbrep', 'MB4RepConv', 'C2mb4rep', 'CFDWconv', 'ICFDWConv', 'C2ICFDW', 'C2CIFDW', 'CC2IFDW')
 
 
 class LayerNorm(nn.Module):
@@ -657,6 +657,32 @@ class C2CIFDW(nn.Module):
     def forward(self, x):
         """Forward pass through C2f layer."""
         y = list(self.cv1(x).chunk(2, 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+    def forward_split(self, x):
+        """Forward pass using split() instead of chunk()."""
+        y = list(self.cv1(x).split((self.c, self.c), 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+
+class CC2IFDW(nn.Module):
+    """CSP Bottleneck with CIFDWConv block."""
+
+    # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
+        super().__init__()
+        k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
+        self.c = int((c2 + rank) * e)  # hidden channels
+        self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
+        self.cv1 = Conv(c1, 2 * int(c2 * e), 1, 1)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+
+    def forward(self, x):
+        """Forward pass through C2f layer."""
+        y = list(self.channel_coords(self.cv1(x)).chunk(2, 1))
         y.extend(m(y[-1]) for m in self.m)
         return self.cv2(torch.cat(y, 1))
 
