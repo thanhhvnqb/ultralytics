@@ -8,10 +8,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .conv import Conv, DWConv
+from .conv import Conv, DWConv, autopad
 
 __all__ = ('MBConv', 'C2mb', 'MBConv4', 'C2mb4', 'MBConvS', 'C2mbS', 'RepDWConv', 'MBRepConv',
-           'C2mbrep', 'MB4RepConv', 'C2mb4rep', 'CFDWconv', 'ICFDWConv', 'C2ICFDW', 'C2CIFDW', 'CC2IFDW')
+           'C2mbrep', 'MB4RepConv', 'C2mb4rep', 'CFDWconv', 'ICFDWConv', 'C2ICFDW', 'C2CIFDW', 'CC2IFDW', 'CoorC2IFDW')
 
 
 class LayerNorm(nn.Module):
@@ -84,7 +84,7 @@ class C2mb(nn.Module):
 class MBConv4(nn.Module):
     """Mobile Inverted Convolution block with expand_factor=4."""
 
-    def __init__(self, c1, c2, shortcut=True, s=1, k=5, e=4.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
+    def __init__(self, c1, c2, shortcut=True, s=1, k=7, e=4.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k=1)
@@ -100,7 +100,7 @@ class MBConv4(nn.Module):
 class C2mb4(nn.Module):
     """CSP Bottleneck with MBConv block with expand_factor=4."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, k=5, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=False, k=7, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
@@ -691,3 +691,48 @@ class CC2IFDW(nn.Module):
         y = list(self.cv1(x).split((self.c, self.c), 1))
         y.extend(m(y[-1]) for m in self.m)
         return self.cv2(torch.cat(y, 1))
+
+
+class CoorC2IFDW(nn.Module):
+    """CSP Bottleneck with IFDWConv block."""
+
+    # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
+        super().__init__()
+        k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
+        self.c = int((c2 + rank) * e)  # hidden channels
+        self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
+        self.cv1 = Conv(c1, 2 * int(c2 * e), 1, 1)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+
+    def forward(self, x):
+        """Forward pass through C2f layer."""
+        y = list(self.cv1(self.channel_coords(x)).chunk(2, 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+    def forward_split(self, x):
+        """Forward pass using split() instead of chunk()."""
+        y = list(self.cv1(x).split((self.c, self.c), 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+
+class CoordConvPool(Conv):
+    """CoordConvPool is a convolutional layer with stride=2 and padding=1 with Coordinate Channels before convolution.
+    with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
+
+    def __init__(self, c1, c2, k=1, s=1, stride=2, p=None, g=1, d=1, act=True, rank=2):
+        """Initialize Conv layer with given arguments including activation."""
+        super().__init__(c1, c2, 1, 1, p, g, d, act)
+        self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
+        self.conv = nn.Conv2d(c1 + rank, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
+
+    def forward(self, x):
+        """Apply convolution, batch normalization and activation to input tensor."""
+        return self.act(self.bn(self.conv(self.channel_coords(x))))
+
+    def forward_fuse(self, x):
+        """Perform transposed convolution of 2D data."""
+        return self.act(self.conv(self.channel_coords(x)))

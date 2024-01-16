@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from ultralytics.nn.modules import (
     C2mb, C2mb4, C2mbS, RepDWConv, MBRepConv, C2mbrep,
-    MB4RepConv, C2mb4rep, CFDWconv, ICFDWConv, C2ICFDW, C2CIFDW, CC2IFDW)
+    MB4RepConv, C2mb4rep, CFDWconv, ICFDWConv, C2ICFDW, C2CIFDW, CC2IFDW, CoordConvPool, CoorC2IFDW)
 
 from ultralytics.nn.modules import (
     AIFI,
@@ -187,7 +187,7 @@ class BaseModel(nn.Module):
         """
         if not self.is_fused():
             for m in self.model.modules():
-                if isinstance(m, (Conv, Conv2, DWConv)) and hasattr(m, "bn"):
+                if isinstance(m, (Conv, Conv2, DWConv, CoordConvPool)) and hasattr(m, "bn"):
                     if isinstance(m, Conv2):
                         m.fuse_convs()
                     m.conv = fuse_conv_and_bn(m.conv, m.bn)  # update conv
@@ -931,7 +931,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             C2mbrep,
             C2mb4rep,
             C2ICFDW,
-            C2CIFDW, CC2IFDW, C3,
+            C2CIFDW, CC2IFDW, CoorC2IFDW, CoordConvPool, C3,
             C3TR,
             C3Ghost,
             nn.ConvTranspose2d,
@@ -952,7 +952,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 )  # num heads
 
             args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C2mbrep, C2mb4rep, C2ICFDW, C2CIFDW, CC2IFDW, C3, C3TR, C3Ghost, C3x, RepC3):
+            if m in (BottleneckCSP, C1, C2, C2f, C2fAttn, C2mb, C2mb4, C2mbS, C2mbrep, C2mb4rep, C2ICFDW, C2CIFDW, CC2IFDW, CoorC2IFDW, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is AIFI:
