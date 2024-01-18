@@ -601,10 +601,9 @@ class C2ICFDW(nn.Module):
     def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
-        rank = 2
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((rank + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(ICFDWConv(self.c, self.c, shortcut, k=k, stride=stride,
                                with_r=with_r, rank=rank) for _ in range(n))
 
@@ -647,10 +646,9 @@ class C2CIFDW(nn.Module):
     def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
-        rank = 2
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((rank + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(CIFDWConv(self.c, self.c, shortcut, k=k, stride=stride,
                                with_r=with_r, rank=rank) for _ in range(n))
 
@@ -700,9 +698,9 @@ class CoorC2IFDW(nn.Module):
     def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
-        self.c = int((c2 + rank) * e)  # hidden channels
+        self.c = int(c2 * e)  # hidden channels
         self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
-        self.cv1 = Conv(c1, 2 * int(c2 * e), 1, 1)
+        self.cv1 = Conv((c1 + rank + int(with_r)), 2 * int(c2 * e), 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
 
