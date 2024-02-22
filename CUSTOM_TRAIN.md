@@ -43,7 +43,7 @@ else:
 ```yolo pose train data=coco-pose.yaml model=cyolov12n-pose.yaml name=trainval/cyolov12n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
 ### Segmentation
 - Câu lệnh train với 500 epoch
-```yolo segment train data=coco-pose.yaml model=cyolov12n-seg.yaml name=trainval/cyolov12n imgsz=640 batch=962 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
+```yolo segment train data=coco.yaml model=cyolov12n-seg.yaml name=trainval/cyolov12n imgsz=640 batch=128 epochs=500 close_mosaic=10 workers=24 device=0,1,2,3 pretrained=False```
 
 ## Validation
 ### Detection
