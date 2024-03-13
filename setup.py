@@ -39,7 +39,6 @@ setup(
     install_requires=REQUIREMENTS,
     extras_require={
         'dev': [
-            'ipython',
             'check-manifest',
             'pytest',
             'pytest-cov',
@@ -47,13 +46,10 @@ setup(
             'mkdocs-material',
             'mkdocstrings[python]',
             'mkdocs-redirects',  # for 301 redirects
-            'mkdocs-ultralytics-plugin>=0.0.25',  # for meta descriptions and images, dates and authors
+            'mkdocs-ultralytics-plugin>=0.0.21',  # for meta descriptions and images, dates and authors
         ],
-        'export': [
-            'coremltools>=6.0,<=6.2',
-            'openvino-dev>=2023.0',
-            'tensorflowjs',  # automatically installs tensorflow
-        ], },
+        'export': ['coremltools>=6.0', 'openvino-dev>=2023.0', 'tensorflowjs'],  # automatically installs tensorflow
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -61,6 +57,7 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -74,3 +71,4 @@ setup(
         'Operating System :: Microsoft :: Windows', ],
     keywords='machine-learning, deep-learning, vision, ML, DL, AI, YOLO, YOLOv3, YOLOv5, YOLOv8, HUB, Ultralytics',
     entry_points={'console_scripts': ['yolo = ultralytics.cfg:entrypoint', 'ultralytics = ultralytics.cfg:entrypoint']})
+

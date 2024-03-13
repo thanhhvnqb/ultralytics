@@ -11,9 +11,9 @@ ADD https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Aria
 ADD https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Arial.Unicode.ttf /tmp/Ultralytics/
 
 # Install linux packages
-# g++ required to build 'tflite_support' and 'lap' packages, libusb-1.0-0 required for 'tflite_support' package
+# g++ required to build 'tflite_support' and 'lap' packages
 RUN apt update \
-    && apt install --no-install-recommends -y gcc git zip curl htop libgl1-mesa-glx libglib2.0-0 libpython3-dev gnupg g++ libusb-1.0-0
+    && apt install --no-install-recommends -y gcc git zip curl htop libgl1-mesa-glx libglib2.0-0 libpython3-dev gnupg g++
 # RUN alias python=python3
 
 # Security updates
@@ -21,6 +21,7 @@ RUN apt update \
 RUN apt upgrade --no-install-recommends -y openssl tar
 
 # Create working directory
+RUN mkdir -p /usr/src/ultralytics
 WORKDIR /usr/src/ultralytics
 
 # Copy contents
@@ -30,22 +31,12 @@ ADD https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt /u
 
 # Install pip packages
 RUN python3 -m pip install --upgrade pip wheel
-RUN pip install --no-cache -e ".[export]" thop albumentations comet pycocotools
-
-# Run exports to AutoInstall packages
-RUN yolo export model=tmp/yolov8n.pt format=edgetpu imgsz=32
-RUN yolo export model=tmp/yolov8n.pt format=ncnn imgsz=32
-# Requires <= Python 3.10, bug with paddlepaddle==2.5.0
-RUN pip install --no-cache paddlepaddle==2.4.2 x2paddle
-# Fix error: `np.bool` was a deprecated alias for the builtin `bool`
-RUN pip install --no-cache numpy==1.23.5
-# Remove exported models
-RUN rm -rf tmp
+RUN pip install --no-cache -e . albumentations comet thop pycocotools onnx onnx-simplifier onnxruntime-gpu
+# Avoid DDP error "MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library"
+RUN pip install -U numpy
 
 # Set environment variables
 ENV OMP_NUM_THREADS=1
-# Avoid DDP error "MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library" https://github.com/pytorch/pytorch/issues/37377
-ENV MKL_THREADING_LAYER=GNU
 
 
 # Usage Examples -------------------------------------------------------------------------------------------------------
@@ -79,3 +70,4 @@ ENV MKL_THREADING_LAYER=GNU
 
 # GCP VM from Image
 # docker.io/ultralytics/ultralytics:latest
+
