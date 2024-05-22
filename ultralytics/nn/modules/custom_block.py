@@ -166,7 +166,7 @@ class RepDWConv(nn.Module):
     """
     default_act = nn.SiLU()  # default activation
 
-    def __init__(self, c, k=(3, 5), s=1, g=1, act=True, bn=False, deploy=False):
+    def __init__(self, c, k=(3, 5), s=1, g=1, bn=False, act=True, deploy=False):
         super().__init__()
         self.g = g
         self.k = k
@@ -222,10 +222,9 @@ class RepDWConv(nn.Module):
             eps = branch.bn.eps
         elif isinstance(branch, nn.BatchNorm2d):
             if not hasattr(self, 'id_tensor'):
-                input_dim = self.c1 // self.g
-                kernel_value = np.zeros((self.c1, input_dim, 3, 3), dtype=np.float32)
-                for i in range(self.c1):
-                    kernel_value[i, i % input_dim, 1, 1] = 1
+                kernel_value = np.zeros((self.c, 1, max(self.k), max(self.k)), dtype=np.float32)
+                for i in range(self.c):
+                    kernel_value[i, 0, max(self.k) // 2, max(self.k) // 2] = 1
                 self.id_tensor = torch.from_numpy(kernel_value).to(branch.weight.device)
             kernel = self.id_tensor
             running_mean = branch.running_mean
@@ -265,11 +264,11 @@ class RepDWConv(nn.Module):
 class MBRepConv(nn.Module):
     """Mobile Inverted Convolution block."""
 
-    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=6.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
+    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), bn=False, e=6.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k=1)
-        self.dwconv = RepDWConv(c_, k=k, s=s)
+        self.dwconv = RepDWConv(c_, k=k, s=s, bn=bn)
         self.cv2 = Conv(c_, c2, k=1)
         self.add = shortcut and c1 == c2 and s == 1
 
@@ -281,13 +280,13 @@ class MBRepConv(nn.Module):
 class C2mbrep(nn.Module):
     """CSP Bottleneck with MBConvRep block."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, bn=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k, bn=bn) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
@@ -305,11 +304,11 @@ class C2mbrep(nn.Module):
 class MB4RepConv(nn.Module):
     """Mobile Inverted Convolution block."""
 
-    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=4.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
+    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), bn=False, e=4.0):  # ch_in, ch_out, shortcut, groups, kernels, expand
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k=1)
-        self.dwconv = RepDWConv(c_, k=k, s=s)
+        self.dwconv = RepDWConv(c_, k=k, s=s, bn=bn)
         self.cv2 = Conv(c_, c2, k=1)
         self.add = shortcut and c1 == c2 and s == 1
 
@@ -321,13 +320,13 @@ class MB4RepConv(nn.Module):
 class C2mb4rep(nn.Module):
     """CSP Bottleneck with MBConvRep block."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, bn=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(MB4RepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+        self.m = nn.ModuleList(MB4RepConv(self.c, self.c, shortcut, k=k, bn=bn) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
@@ -581,11 +580,11 @@ class ICFDWConv(nn.Module):
     """Inverted Coordinate Fusion Depthwise Convolution block."""
 
     # ch_in, ch_out, shortcut, groups, kernels, expand
-    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=6.0, stride=4, with_r=False, rank=2):
+    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), bn=False, e=6.0, stride=4, with_r=False, rank=2):
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k=1)
-        self.cfdwconv = CFDWconv(c_, k=k, s=s, stride=stride, with_r=with_r, rank=rank)
+        self.cfdwconv = CFDWconv(c_, k=k, s=s, stride=stride, bn=bn, with_r=with_r, rank=rank)
         self.cv2 = Conv(c_ + rank + int(with_r), c2, k=1)
         self.add = shortcut and c1 == c2 and s == 1
 
@@ -598,13 +597,13 @@ class C2ICFDW(nn.Module):
     """CSP Bottleneck with ICFDWConv block."""
 
     # ch_in, ch_out, number, shortcut, groups, expansion
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, bn=False, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(ICFDWConv(self.c, self.c, shortcut, k=k, stride=stride,
+        self.m = nn.ModuleList(ICFDWConv(self.c, self.c, shortcut, k=k, stride=stride, bn=bn,
                                with_r=with_r, rank=rank) for _ in range(n))
 
     def forward(self, x):
@@ -624,13 +623,13 @@ class CIFDWConv(nn.Module):
     """Coordinate for Inverted Fusion Depthwise Convolution block."""
 
     # ch_in, ch_out, shortcut, groups, kernels, expand
-    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), e=6.0, stride=4, with_r=False, rank=2):
+    def __init__(self, c1, c2, shortcut=True, s=1, k=(3, 5), bn=False, e=6.0, stride=4, with_r=False, rank=2):
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
         self.cv1 = Conv(c1 + 2 + int(with_r), c_, k=1)
         # self.cfdwconv = CFDWconv(c_, k=k, s=s, stride=stride, with_r=with_r, rank=rank)
-        self.repdwconv = RepDWConv(c_, k=k, s=s)
+        self.repdwconv = RepDWConv(c_, k=k, s=s, bn=bn)
         self.cv2 = Conv(c_, c2, k=1)
         self.add = shortcut and c1 == c2 and s == 1
 
@@ -643,13 +642,13 @@ class C2CIFDW(nn.Module):
     """CSP Bottleneck with CIFDWConv block."""
 
     # ch_in, ch_out, number, shortcut, groups, expansion
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, bn=False, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(CIFDWConv(self.c, self.c, shortcut, k=k, stride=stride,
+        self.m = nn.ModuleList(CIFDWConv(self.c, self.c, shortcut, k=k, stride=stride, bn=bn,
                                with_r=with_r, rank=rank) for _ in range(n))
 
     def forward(self, x):
@@ -669,14 +668,14 @@ class CC2IFDW(nn.Module):
     """CSP Bottleneck with CIFDWConv block."""
 
     # ch_in, ch_out, number, shortcut, groups, expansion
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, bn=False, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
         self.c = int((c2 + rank) * e)  # hidden channels
         self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
         self.cv1 = Conv(c1, 2 * int(c2 * e), 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k, bn=bn) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
@@ -695,14 +694,14 @@ class CoorC2IFDW(nn.Module):
     """CSP Bottleneck with IFDWConv block."""
 
     # ch_in, ch_out, number, shortcut, groups, expansion
-    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, e=0.5, with_r=False, rank=2):
+    def __init__(self, c1, c2, n=1, shortcut=False, kmin=3, kmax=5, stride=4, bn=False, e=0.5, with_r=False, rank=2):
         super().__init__()
         k = tuple([kt for kt in range(kmin, kmax + 1, 2)])
         self.c = int(c2 * e)  # hidden channels
         self.channel_coords = ChannelCoords(stride=stride, rank=rank, with_r=False)
         self.cv1 = Conv((c1 + rank + int(with_r)), 2 * int(c2 * e), 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k) for _ in range(n))
+        self.m = nn.ModuleList(MBRepConv(self.c, self.c, shortcut, k=k, bn=bn) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
