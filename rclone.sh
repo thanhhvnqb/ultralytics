@@ -1,1 +1,1 @@
-rclone copy -v /home/islab/DATA/ultralytics/ gdrive:Working/yolov9/ --drive-chunk-size=256M --transfers=40 --checkers=40 --tpslimit=9 --fast-list --max-backlog 200000
+rclone copy -v /home/oem/ultralytics/ gdrive:Working/yolov8.1/ --drive-chunk-size=256M --transfers=40 --checkers=40 --tpslimit=9 --fast-list --max-backlog 200000
