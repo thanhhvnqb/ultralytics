@@ -20,7 +20,7 @@ from .conv import Conv, DWConv
 from .transformer import MLP, DeformableTransformerDecoder, DeformableTransformerDecoderLayer
 from .utils import bias_init_with_prob, linear_init
 
-__all__ = "OBB", "Classify", "Detect", "Pose", "RTDETRDecoder", "Segment", "YOLOEDetect", "YOLOESegment", "v10Detect"
+__all__ = "OBB", "Classify", "Detect", "Pose", "RTDETRDecoder", "Segment", "YOLOEDetect", "YOLOESegment", "v10Detect", "v15Detect"
 
 
 class Detect(nn.Module):
@@ -1766,3 +1766,185 @@ class v10Detect(Detect):
     def fuse(self):
         """Remove the one2many head for inference optimization."""
         self.cv2 = self.cv3 = None
+
+
+class TaskInteractionModule(nn.Module):
+    """Task-Interaction Module (TIM) for YOLO Head.
+    
+    Based on TSCODE and MGA principles, this module enables cross-task feature interaction
+    between classification and bounding box regression branches.
+    
+    The module uses sigmoid gating to create attention maps where:
+    - Box features guide classification: Suppress responses in background regions
+    - Classification features guide box regression: Enhance responses at object regions
+    
+    Attributes:
+        box_to_cls (nn.Sequential): Pathway to generate attention mask for classification from box features
+        cls_to_box (nn.Sequential): Pathway to generate attention mask for box regression from classification features
+    """
+    
+    def __init__(self, cv2: int, cv3: int):
+        """Initialize Task-Interaction Module.
+        
+        Args:
+            channels (int): Number of channels in the input features
+        """
+        super().__init__()
+        # Box features guide classification: Conv(F_box) -> Sigmoid -> Mask
+        self.box_to_cls = nn.Sequential(Conv(cv2, cv3, 1), nn.Sigmoid())
+        
+        # Classification features guide box regression: Conv(F_cls) -> Sigmoid -> Mask
+        self.cls_to_box = nn.Sequential(Conv(cv3, cv2, 1), nn.Sigmoid())
+    
+    def forward(self, x_cls: torch.Tensor, x_box: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass of Task-Interaction Module.
+        
+        Args:
+            x_cls (torch.Tensor): Classification branch features [B, C, H, W]
+            x_box (torch.Tensor): Box regression branch features [B, C, H, W]
+            
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: Enhanced classification and box features
+                - x_cls_new = x_cls + (x_cls * Sigmoid(Conv(x_box)))
+                - x_box_new = x_box + (x_box * Sigmoid(Conv(x_cls)))
+        """
+        # Generate attention maps based on task-specific information
+        # cls_attention_map: Where in the image should we trust classification?
+        # Answer based on box features: high confidence where box features show object-like patterns
+        cls_attention_map = self.box_to_cls(x_box)
+        
+        # box_attention_map: Where in the image should we refine boxes?
+        # Answer based on classification features: high confidence where cls features show strong class signals
+        box_attention_map = self.cls_to_box(x_cls)
+        
+        # Apply gating with residual connection
+        # Keep original features + add modulated features guided by the other task
+        x_cls_new = x_cls + (x_cls * cls_attention_map)
+        x_box_new = x_box + (x_box * box_attention_map)
+        
+        return x_cls_new, x_box_new
+        
+
+class v15Detect(Detect):
+    """v15 Detection head with Task-Interaction Module (TIM).
+
+    This class extends the Detect head to incorporate cross-task interaction between classification
+    and bounding box regression branches. It implements the Task-Interaction Module (TIM) which uses
+    sigmoid gating to allow features from one branch to enhance the other branch.
+
+    The key innovation is that classification and bounding box features guide each other:
+    - Box features suppress classification responses in background regions
+    - Classification features enhance box refinement at object regions
+
+    Attributes:
+        tim (nn.ModuleList): Task-Interaction Modules for each detection layer
+        cv2 (nn.ModuleList): Convolution layers for box regression
+        cv3 (nn.ModuleList): Convolution layers for classification
+
+    Methods:
+        __init__: Initialize the v15Detect object with Task-Interaction Modules
+        forward_head: Forward pass with TIM-enhanced features
+        forward: Perform forward pass of the v15Detect module
+
+    Examples:
+        Create a v15Detect head
+        >>> v15_detect = v15Detect(nc=80, ch=(256, 512, 1024))
+        >>> x = [torch.randn(1, 256, 80, 80), torch.randn(1, 512, 40, 40), torch.randn(1, 1024, 20, 20)]
+        >>> outputs = v15_detect(x)
+    """
+
+    def __init__(self, nc: int = 80, reg_max=16, end2end=False, ch: tuple = ()):
+        """Initialize the v15Detect object with Task-Interaction Modules.
+
+        Args:
+            nc (int): Number of classes.
+            reg_max (int): Maximum number of DFL channels.
+            end2end (bool): Whether to use end-to-end NMS-free detection.
+            ch (tuple): Tuple of channel sizes from backbone feature maps.
+        """
+        super().__init__(nc=nc, reg_max=reg_max, end2end=end2end, ch=ch)
+        
+        # Initialize Task-Interaction Modules
+        # We need to get the actual channel dimension that cv2 and cv3 operate on
+        # cv2 outputs 4*reg_max channels, cv3 outputs nc channels
+        # We apply TIM at the intermediate level (before final conv layer)
+        c2, c3 = max((16, ch[0] // 4, self.reg_max * 4)), max(ch[0], min(self.nc, 100))  # channels
+        
+        # Create TIM modules - use the common intermediate channel dimension
+        # For better interaction, we use c3 (class head intermediate) as the dimension
+        self.tim = nn.ModuleList([TaskInteractionModule(c2, c3) for _ in ch])
+
+    def forward_head(
+        self, x: list[torch.Tensor], box_head: torch.nn.Module = None, cls_head: torch.nn.Module = None
+    ) -> dict[str, torch.Tensor]:
+        """Concatenates and returns predicted bounding boxes and class probabilities with TIM enhancement.
+
+        Args:
+            x (list[torch.Tensor]): List of feature maps from different detection layers
+            box_head (torch.nn.Module): Box regression head
+            cls_head (torch.nn.Module): Classification head
+
+        Returns:
+            dict[str, torch.Tensor]: Dictionary containing boxes, scores, and features
+        """
+        if box_head is None or cls_head is None:  # for fused inference
+            return dict()
+        
+        bs = x[0].shape[0]  # batch size
+        boxes_list = []
+        scores_list = []
+        
+        for i in range(self.nl):
+            # Get intermediate features from each branch
+            # For cv2 and cv3, they are Sequential modules with multiple layers
+            # We need to process them in stages to apply TIM
+            
+            # Get the input feature
+            x_in = x[i]
+            
+            # Process through intermediate layers (all but the last Conv2d layer)
+            # cv2 structure: Conv -> Conv -> Conv2d(output)
+            # cv3 structure: Conv -> Conv -> Conv2d(output) or similar
+            
+            # Extract intermediate outputs before final layer
+            feat_box_intermediate = box_head[i][:-1](x_in)  # All but final Conv2d
+            feat_cls_intermediate = cls_head[i][:-1](x_in)  # All but final Conv2d
+            
+            # Apply Task-Interaction Module
+            feat_cls_enhanced, feat_box_enhanced = self.tim[i](feat_cls_intermediate, feat_box_intermediate)
+            
+            # Apply final Conv2d layers
+            box_output = box_head[i][-1](feat_box_enhanced)  # Final Conv2d for box
+            cls_output = cls_head[i][-1](feat_cls_enhanced)  # Final Conv2d for cls
+            
+            # Reshape and append
+            boxes_list.append(box_output.view(bs, 4 * self.reg_max, -1))
+            scores_list.append(cls_output.view(bs, self.nc, -1))
+        
+        boxes = torch.cat(boxes_list, dim=-1)
+        scores = torch.cat(scores_list, dim=-1)
+        
+        return dict(boxes=boxes, scores=scores, feats=x)
+
+    def forward(
+        self, x: list[torch.Tensor]
+    ) -> dict[str, torch.Tensor] | torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        """Forward pass of v15Detect with Task-Interaction Module enhancement.
+
+        Args:
+            x (list[torch.Tensor]): List of feature maps from backbone
+
+        Returns:
+            dict[str, torch.Tensor] | torch.Tensor | tuple: Detection results
+        """
+        preds = self.forward_head(x, **self.one2many)
+        if self.end2end:
+            x_detach = [xi.detach() for xi in x]
+            one2one = self.forward_head(x_detach, **self.one2one)
+            preds = {"one2many": preds, "one2one": one2one}
+        if self.training:
+            return preds
+        y = self._inference(preds["one2one"] if self.end2end else preds)
+        if self.end2end:
+            y = self.postprocess(y.permute(0, 2, 1))
+        return y if self.export else (y, preds)
