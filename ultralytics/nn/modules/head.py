@@ -1800,6 +1800,14 @@ class TaskInteractionModule(nn.Module):
         # Sigmoid will be applied in forward pass in a fused manner
         self.box_to_cls_conv = nn.Conv2d(cv2, cv3, 1, bias=True)
         self.cls_to_box_conv = nn.Conv2d(cv3, cv2, 1, bias=True)
+        
+        # Initialize weights and biases so that initially:
+        # x_cls * Sigmoid(Conv(x_box)) ≈ 0, making x_cls_new ≈ x_cls
+        # x_box * Sigmoid(Conv(x_cls)) ≈ 0, making x_box_new ≈ x_box
+        nn.init.zeros_(self.box_to_cls_conv.weight)
+        nn.init.constant_(self.box_to_cls_conv.bias, -10.0)  # Large negative value -> Sigmoid ≈ 0
+        nn.init.zeros_(self.cls_to_box_conv.weight)
+        nn.init.constant_(self.cls_to_box_conv.bias, -10.0)  # Large negative value -> Sigmoid ≈ 0
     
     def forward(self, x_cls: torch.Tensor, x_box: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass of Task-Interaction Module with optimized operations.
