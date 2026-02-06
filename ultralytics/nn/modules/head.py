@@ -1892,12 +1892,12 @@ class TaskInteractionModuleV2(nn.Module):
         # Calculate both deltas first (parallelizable) before modifying inputs
         x_cls_delta = self.box_to_cls_conv(x_box)
         x_box_delta = self.cls_to_box_conv(x_cls)
-        
-        # In-place add for memory efficiency and speed
-        x_cls.add_(x_cls_delta)
-        x_box.add_(x_box_delta)
-        
-        return x_cls, x_box
+
+        # Out-of-place add to avoid autograd inplace versioning errors
+        x_cls_new = torch.add(x_cls, x_cls_delta)
+        x_box_new = torch.add(x_box, x_box_delta)
+
+        return x_cls_new, x_box_new
        
 
 class v15Detect(Detect):
