@@ -1810,7 +1810,7 @@ class TaskInteractionModule(nn.Module):
         nn.init.zeros_(self.cls_to_box_conv.bias)
     
     def forward(self, x_cls: torch.Tensor, x_box: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass of Task-Interaction Module with direct residual connections.
+        """Forward pass of Task-Interaction Module with direct residual connections (optimized).
         
         Args:
             x_cls (torch.Tensor): Classification branch features [B, C, H, W]
@@ -1821,13 +1821,15 @@ class TaskInteractionModule(nn.Module):
                 - x_cls_new = x_cls + conv(x_box)
                 - x_box_new = x_box + conv(x_cls)
         """
-        # Box features guide classification through direct residual connection
-        x_cls_new = x_cls + self.box_to_cls_conv(x_box)
+        # Calculate both deltas first (parallelizable) before modifying inputs
+        x_cls_delta = self.box_to_cls_conv(x_box)
+        x_box_delta = self.cls_to_box_conv(x_cls)
         
-        # Classification features guide box regression through direct residual connection
-        x_box_new = x_box + self.cls_to_box_conv(x_cls)
+        # In-place add for memory efficiency and speed
+        x_cls.add_(x_cls_delta)
+        x_box.add_(x_box_delta)
         
-        return x_cls_new, x_box_new
+        return x_cls, x_box
         
 
 class v15Detect(Detect):
