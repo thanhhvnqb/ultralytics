@@ -1769,6 +1769,74 @@ class v10Detect(Detect):
 
 
 class TaskInteractionModule(nn.Module):
+    """Task-Interaction Module (TIM) for YOLO Head - Optimized version.
+    
+    Based on TSCODE and MGA principles, this module enables cross-task feature interaction
+    between classification and bounding box regression branches.
+    
+    The module uses sigmoid gating to create attention maps where:
+    - Box features guide classification: Suppress responses in background regions
+    - Classification features guide box regression: Enhance responses at object regions
+    
+    Optimizations:
+    - Fused Conv+Sigmoid using a single Conv2d layer
+    - In-place operations to reduce memory allocations
+    - torch.addcmul for fused multiply-add operations
+    
+    Attributes:
+        box_to_cls_conv (nn.Conv2d): Conv layer to generate attention mask for classification from box features
+        cls_to_box_conv (nn.Conv2d): Conv layer to generate attention mask for box regression from classification features
+    """
+    
+    def __init__(self, cv2: int, cv3: int):
+        """Initialize Task-Interaction Module with optimized layers.
+        
+        Args:
+            cv2 (int): Number of channels in box regression features
+            cv3 (int): Number of channels in classification features
+        """
+        super().__init__()
+        # Use single Conv2d instead of Sequential(Conv, Sigmoid) for better performance
+        # Sigmoid will be applied in forward pass in a fused manner
+        self.box_to_cls_conv = nn.Conv2d(cv2, cv3, 1, bias=True)
+        self.cls_to_box_conv = nn.Conv2d(cv3, cv2, 1, bias=True)
+        
+        # Initialize weights and biases so that initially:
+        # x_cls * Sigmoid(Conv(x_box)) ≈ 0, making x_cls_new ≈ x_cls
+        # x_box * Sigmoid(Conv(x_cls)) ≈ 0, making x_box_new ≈ x_box
+        nn.init.zeros_(self.box_to_cls_conv.weight)
+        nn.init.constant_(self.box_to_cls_conv.bias, -10.0)  # Large negative value -> Sigmoid ≈ 0
+        nn.init.zeros_(self.cls_to_box_conv.weight)
+        nn.init.constant_(self.cls_to_box_conv.bias, -10.0)  # Large negative value -> Sigmoid ≈ 0
+    
+    def forward(self, x_cls: torch.Tensor, x_box: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass of Task-Interaction Module with optimized operations.
+        
+        Args:
+            x_cls (torch.Tensor): Classification branch features [B, C, H, W]
+            x_box (torch.Tensor): Box regression branch features [B, C, H, W]
+            
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: Enhanced classification and box features
+                - x_cls_new = x_cls + (x_cls * Sigmoid(Conv(x_box)))
+                - x_box_new = x_box + (x_box * Sigmoid(Conv(x_cls)))
+        """
+        # Optimized: Use torch.addcmul for fused multiply-add: out = input + value * tensor1 * tensor2
+        # This reduces memory allocations and kernel launches
+        
+        # Box features guide classification
+        # x_cls_new = x_cls + x_cls * sigmoid(conv(x_box))
+        # Using addcmul: addcmul_(tensor1=x_cls, tensor2=sigmoid(conv(x_box)))
+        x_cls_new = torch.addcmul(x_cls, x_cls, self.box_to_cls_conv(x_box).sigmoid())
+        
+        # Classification features guide box regression  
+        # x_box_new = x_box + x_box * sigmoid(conv(x_cls))
+        x_box_new = torch.addcmul(x_box, x_box, self.cls_to_box_conv(x_cls).sigmoid())
+        
+        return x_cls_new, x_box_new
+
+
+class TaskInteractionModuleV2(nn.Module):
     """Task-Interaction Module (TIM) for YOLO Head - Lightweight version without sigmoid.
     
     Based on TSCODE and MGA principles, this module enables cross-task feature interaction
@@ -1830,7 +1898,7 @@ class TaskInteractionModule(nn.Module):
         x_box.add_(x_box_delta)
         
         return x_cls, x_box
-        
+       
 
 class v15Detect(Detect):
     """v15 Detection head with Task-Interaction Module (TIM).
