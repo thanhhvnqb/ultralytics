@@ -1889,15 +1889,11 @@ class TaskInteractionModuleV2(nn.Module):
                 - x_cls_new = x_cls + conv(x_box)
                 - x_box_new = x_box + conv(x_cls)
         """
-        # Calculate both deltas first (parallelizable) before modifying inputs
-        x_cls_delta = self.box_to_cls_conv(x_box)
-        x_box_delta = self.cls_to_box_conv(x_cls)
-
         # Out-of-place add to avoid autograd inplace versioning errors
-        x_cls_new = torch.add(x_cls, x_cls_delta)
-        x_box_new = torch.add(x_box, x_box_delta)
+        x_cls = torch.add(x_cls, self.box_to_cls_conv(x_box))
+        x_box = torch.add(x_box, self.cls_to_box_conv(x_cls))
 
-        return x_cls_new, x_box_new
+        return x_cls, x_box
        
 
 class v15Detect(Detect):
@@ -1947,7 +1943,7 @@ class v15Detect(Detect):
         
         # Create TIM modules - use the common intermediate channel dimension
         # For better interaction, we use c3 (class head intermediate) as the dimension
-        self.tim = nn.ModuleList([TaskInteractionModule(c2, c3) for _ in ch])
+        self.tim = nn.ModuleList([TaskInteractionModuleV2(c2, c3) for _ in ch])
 
     def forward_head(
         self, x: list[torch.Tensor], box_head: torch.nn.Module = None, cls_head: torch.nn.Module = None
